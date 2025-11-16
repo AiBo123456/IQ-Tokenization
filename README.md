@@ -3,13 +3,14 @@
 ```
 pip install -r requirements.txt
 ```
-### 2. Generate nomalized dataset
+### 2. Create the folders /IQ_data and /IQ_normalized under the project root. Save .mat files inside the /IQ_data folder.
+### 3. Generate nomalized dataset
 ```
 python convert_raw_data.py
 ```
-### 3. Train VQVAE model
+### 4. Train VQVAE model
 ```
 python train_vqvae.py
 ```
-### 4. Check the Result
+### 5. Check the Result
 Find training curves online [here](https://www.comet.com/ai-bo/totem/view/new/panels).
