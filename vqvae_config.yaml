@@ -32,9 +32,9 @@ batchsize: 8192
 
 # comet config
 comet_config:
-  api_key: "932CSCW8zABGsPmidoLtvfLW5"
-  project_name: totem
-  workspace: ai-bo
+  api_key: 
+  project_name: 
+  workspace: 
 comet_log: true
 comet_tag: pipline
 comet_name: vqvae_iq_experiment
