@@ -34,7 +34,7 @@ devices: '0,1,2,3'
 test_flops: false
 
 # Save Location
-save_path: IQ_nomalized_data/
+save_path: IQ_normalized_data/
 
 
 
