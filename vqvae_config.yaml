@@ -1,0 +1,46 @@
+# random seed
+seed: 13
+
+# GPU
+model_init_num_gpus: 0
+data_init_cpu_or_gpu: cpu
+
+# data loader
+base_path: IQ_nomalized_data/
+mask_ratio: 0.5
+revined_data: false
+
+
+# vqvae model config
+vqvae_config:
+  model_name: vqvae_shuffle_net
+  model_save_name: vqvae_shuffle_net
+  pretrained: false
+  learning_rate: 1e-3
+  num_training_updates: 15000
+  block_hidden_size: 128
+  num_residual_layers: 2
+  res_hidden_size: 64
+  embedding_dim: 64
+  num_embeddings: 512
+  commitment_cost: 0.25
+  compression_factor: 4
+  data_channels: 16
+save_path: saved_models/
+batchsize: 8192
+
+
+# comet config
+comet_config:
+  api_key: "932CSCW8zABGsPmidoLtvfLW5"
+  project_name: totem
+  workspace: ai-bo
+comet_log: true
+comet_tag: pipline
+comet_name: vqvae_iq_experiment
+
+
+
+
+
+

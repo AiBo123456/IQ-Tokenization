@@ -1,0 +1,43 @@
+# random seed
+seed: 13
+
+# data loader
+data: IQ
+root_path: D:/colledge/CASE/IQ_Tokenization/
+data_path: IQ_data/
+features: M # forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate
+target: OT # target feature in S or MS task
+freq: s # freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h
+input_len: 1000
+sampling_freq: 163840000
+
+
+# forecasting task
+pred_len: 0
+label_len: 50
+seq_len: 100
+
+# Formers
+enc_in: 2
+embed: timeF # time features encoding, options:[timeF, fixed, learned]
+
+
+# optimization
+num_workers: 6
+batch_size: 128
+
+# GPU
+use_gpu: true
+gpu: 0
+use_multi_gpu: false
+devices: '0,1,2,3'
+test_flops: false
+
+# Save Location
+save_path: IQ_nomalized_data/
+
+
+
+
+
+
