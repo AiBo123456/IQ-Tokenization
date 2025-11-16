@@ -12,4 +12,4 @@ python convert_raw_data.py
 python train_vqvae.py
 ```
 ### 4. Check the Result
-Find training curve on comet websit [here]([https://www.comet.com/ai-bo/totem/view/new/panels]).
+Find training curves online [here](https://www.comet.com/ai-bo/totem/view/new/panels).
