@@ -3,7 +3,7 @@
 ```
 pip install -r requirements.txt
 ```
-### 2. Create the folders /IQ_data and /IQ_normalized under the project root. Save .mat files inside the /IQ_data folder.
+### 2. Create the folders /IQ_data and /IQ_normalized_data under the project root. Save .mat files inside the /IQ_data folder.
 ### 3. Generate nomalized dataset
 ```
 python convert_raw_data.py
