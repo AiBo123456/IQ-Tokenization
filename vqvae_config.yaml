@@ -6,7 +6,7 @@ model_init_num_gpus: 0
 data_init_cpu_or_gpu: cpu
 
 # data loader
-base_path: IQ_nomalized_data/
+base_path: IQ_normalized_data/
 mask_ratio: 0.5
 revined_data: false
 
