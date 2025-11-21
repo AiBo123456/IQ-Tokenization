@@ -385,7 +385,7 @@ class Dataset_Pred(Dataset):
 class Dataset_IQ(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, timeenc=0, freq='h', input_len=100, sampling_freq=100):
+                 target='OT', scale=True, timeenc=0, freq='h', input_len=100, sampling_freq=100, train_rate=0.7, test_rate=0.2):
 
         assert size is not None, "IQ dataset requires size argument"
 
@@ -405,6 +405,8 @@ class Dataset_IQ(Dataset):
         self.freq = freq
         self.input_len = input_len
         self.sampling_freq = sampling_freq
+        self.train_rate = train_rate
+        self.test_rate = test_rate
 
         self.root_path = root_path
         self.data_path = data_path
@@ -426,8 +428,8 @@ class Dataset_IQ(Dataset):
         raw_data = np.stack((raw_data['real'], raw_data['imag']), axis=-1)
         times_len, channels_num, _ = raw_data.shape
 
-        num_train = int(times_len * 0.7)
-        num_test = int(times_len * 0.2)
+        num_train = int(times_len * self.train_rate)
+        num_test = int(times_len * self.test_rate)
         num_vali = times_len - num_train - num_test
         border1s = [0, num_train - self.seq_len, times_len - num_test - self.seq_len]
         border2s = [num_train, num_train + num_vali, times_len]

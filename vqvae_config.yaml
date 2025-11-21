@@ -6,7 +6,11 @@ model_init_num_gpus: 0
 data_init_cpu_or_gpu: cpu
 
 # data loader
-base_path: IQ_nomalized_data/
+<<<<<<< Updated upstream
+base_path: IQ_normalized_data/
+=======
+base_path: IQ_normalized_data/July/
+>>>>>>> Stashed changes
 mask_ratio: 0.5
 revined_data: false
 
@@ -17,7 +21,7 @@ vqvae_config:
   model_save_name: vqvae_shuffle_net
   pretrained: false
   learning_rate: 1e-3
-  num_training_updates: 15000
+  num_training_updates: 10000
   block_hidden_size: 128
   num_residual_layers: 2
   res_hidden_size: 64
@@ -27,17 +31,19 @@ vqvae_config:
   compression_factor: 4
   data_channels: 16
 save_path: saved_models/
-batchsize: 8192
+batchsize: 128
 
 
 # comet config
 comet_config:
-  api_key: "932CSCW8zABGsPmidoLtvfLW5"
-  project_name: totem
-  workspace: ai-bo
+  api_key: 
+  project_name: 
+  workspace: 
 comet_log: true
 comet_tag: pipline
 comet_name: vqvae_iq_experiment
+log_interval: 100
+save_model: true
 
 
 

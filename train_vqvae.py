@@ -103,47 +103,68 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
     # do + 0.5 to ciel it
     for epoch in tqdm(range(int((vqvae_config['num_training_updates']/len(train_loader)) + 0.5))):
         model.train()
+        losses = []
+        vq_losses = []
+        recon_errors = []
+        perplexities = []
         # Do masking in the loop
         for i, (batch_x) in enumerate(train_loader):
             tensor_all_data_in_batch = torch.tensor(batch_x, dtype=torch.float, device=device)
             # random mask
-            B, T, C = batch_x.shape
-            mask = torch.rand((B, T, C)).to(device)
+            B, C, T = batch_x.shape
+            mask = torch.rand((B, C, T)).to(device)
             mask[mask <= args.mask_ratio] = 0  # masked
             mask[mask > args.mask_ratio] = 1  # remained
             inp = tensor_all_data_in_batch.masked_fill(mask == 0, 0)
 
             loss, vq_loss, recon_error, x_recon, perplexity, embedding_weight, encoding_indices, encodings = \
                 model.shared_eval(tensor_all_data_in_batch, inp, optimizer, 'train', comet_logger=logger)
+            
+            losses.append(loss.item())
+            vq_losses.append(vq_loss.item())
+            recon_errors.append(recon_error.item())
+            perplexities.append(perplexity.item())
 
-            if epoch % 10000 == 0:
-                comet_logger.log_metric('train_vqvae_loss_each_batch', loss.item())
-                comet_logger.log_metric('train_vqvae_vq_loss_each_batch', vq_loss.item())
-                comet_logger.log_metric('train_vqvae_recon_loss_each_batch', recon_error.item())
-                comet_logger.log_metric('train_vqvae_perplexity_each_batch', perplexity.item())
+        if epoch % args.log_interval == 0:
+            comet_logger.log_metric('train_vqvae_loss_each_batch', sum(losses)/len(losses))
+            comet_logger.log_metric('train_vqvae_vq_loss_each_batch', sum(vq_losses)/len(vq_losses))
+            comet_logger.log_metric('train_vqvae_recon_loss_each_batch', sum(recon_errors)/len(recon_errors))
+            comet_logger.log_metric('train_vqvae_perplexity_each_batch', sum(perplexities)/len(perplexities))
 
         # # uncomment if you want the validation
-        # if epoch % 1000000 == 0:
-        #     with (torch.no_grad()):
-        #         model.eval()
-        #         for i, (batch_x) in enumerate(vali_loader):
-        #             tensor_all_data_in_batch = torch.tensor(batch_x, dtype=torch.float, device=device)
-        #
-        #             # # random mask
-        #             B, T = batch_x.shape
-        #             mask = torch.rand((B, T)).to(device)
-        #             mask[mask <= args.mask_ratio] = 0  # masked
-        #             mask[mask > args.mask_ratio] = 1  # remained
-        #             inp = tensor_all_data_in_batch.masked_fill(mask == 0, 0)
-        #
-        #             val_loss, val_vq_loss, val_recon_error, val_x_recon, val_perplexity, val_embedding_weight, \
-        #                 val_encoding_indices, val_encodings = \
-        #                 model.shared_eval(tensor_all_data_in_batch, inp, optimizer, 'val', comet_logger=logger)
-
-        if epoch % 1000000 == 0:
-            # save the model checkpoints locally and to comet
-            torch.save(model, os.path.join(save_dir, f'checkpoints/model_epoch_{epoch}.pth'))
-            print('Saved model from epoch ', epoch)
+        if epoch % args.val_interval == 0:
+            with (torch.no_grad()):
+                model.eval()
+                val_losses = []
+                val_vq_losses = []
+                val_recon_errors = []
+                val_perplexities = []
+                for i, (batch_x) in enumerate(vali_loader):
+                    tensor_all_data_in_batch = torch.tensor(batch_x, dtype=torch.float, device=device)
+        
+                    # # random mask
+                    B, C, T = batch_x.shape
+                    mask = torch.rand((B, C, T)).to(device)
+                    mask[mask <= args.mask_ratio] = 0  # masked
+                    mask[mask > args.mask_ratio] = 1  # remained
+                    inp = tensor_all_data_in_batch.masked_fill(mask == 0, 0)
+        
+                    val_loss, val_vq_loss, val_recon_error, val_x_recon, val_perplexity, val_embedding_weight, \
+                        val_encoding_indices, val_encodings = \
+                        model.shared_eval(tensor_all_data_in_batch, inp, optimizer, 'val', comet_logger=logger)
+                    val_losses.append(val_loss.item())
+                    val_vq_losses.append(val_vq_loss.item())
+                    val_recon_errors.append(val_recon_error.item())
+                    val_perplexities.append(val_perplexity.item())
+                comet_logger.log_metric('val_vqvae_loss_each_batch', sum(val_losses)/len(val_losses))
+                comet_logger.log_metric('val_vqvae_vq_loss_each_batch', sum(val_vq_losses)/len(val_vq_losses))
+                comet_logger.log_metric('val_vqvae_recon_loss_each_batch', sum(val_recon_errors)/len(val_recon_errors))
+                comet_logger.log_metric('val_vqvae_perplexity_each_batch', sum(val_perplexities)/len(val_perplexities))
+                
+    if config.save_model:
+        # save the model checkpoints locally and to comet
+        torch.save(model, os.path.join(save_dir, f'checkpoints/model_epoch_{epoch}.pth'))
+        print('Saved model from epoch ', epoch)
 
     print('total time: ', round(time.time() - start_time, 3))
     return model
@@ -166,19 +187,19 @@ def create_datloaders(batchsize=100, base_path='dummy', revined_data=False):
     train_dataloader = torch.utils.data.DataLoader(train_data,
                                                    batch_size=batchsize,
                                                    shuffle=True,
-                                                   num_workers=5,
+                                                   num_workers=2,
                                                    drop_last=False)
 
     val_dataloader = torch.utils.data.DataLoader(val_data,
                                                 batch_size=batchsize,
                                                 shuffle=False,
-                                                num_workers=5,
+                                                num_workers=2,
                                                 drop_last=False)
 
     test_dataloader = torch.utils.data.DataLoader(test_data,
                                                 batch_size=batchsize,
                                                 shuffle=False,
-                                                num_workers=5,
+                                                num_workers=2,
                                                 drop_last=False)
 
     return train_dataloader, val_dataloader, test_dataloader
