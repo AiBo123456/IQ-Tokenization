@@ -1,0 +1,12 @@
+trained_vqvae_model_path: saved_models/model_11_20/checkpoints/final_model.pth
+base_path: IQ_normalized_data/June/
+mask_ratio: 0.5
+compression_factor: 4
+use_gpu: true
+gpu: 0
+use_multi_gpu: false
+data_channels: 16
+
+
+
+
