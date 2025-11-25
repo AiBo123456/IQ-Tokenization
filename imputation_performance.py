@@ -32,7 +32,7 @@ def one_loop(loader, vqvae_model, device, args):
 
         mse.append(nn.functional.mse_loss(batch_x_masky, pred_x_masky).item())
         mae.append(nn.functional.l1_loss(batch_x_masky, pred_x_masky).item())
-        acc.append(torch.mean((torch.abs(batch_x_masky - pred_x_masky) < 0.1).float()).item())
+        acc.append(torch.mean((torch.abs(batch_x_masky - pred_x_masky) < args.acc_threshold).float()).item())
 
     print('MSE:', np.mean(mse))
     print('MAE:', np.mean(mae))

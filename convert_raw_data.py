@@ -45,11 +45,16 @@ class ExtractData:
 
         # These have dimension [bs, ntime, nvars]
         x_train_in_revin_space_arr, x_train_original_arr = self.one_loop(train_loader)
+        x_train_in_revin_space_arr = x_train_in_revin_space_arr[..., :self.args.data_channels, :]
+        x_train_original_arr = x_train_original_arr[..., :self.args.data_channels, :]
         print('starting val')
         x_val_in_revin_space_arr, x_val_original_arr = self.one_loop(vali_loader)
+        x_val_in_revin_space_arr = x_val_in_revin_space_arr[..., :self.args.data_channels, :]
+        x_val_original_arr = x_val_original_arr[..., :self.args.data_channels, :]
         print('starting test')
         x_test_in_revin_space_arr, x_test_original_arr = self.one_loop(test_loader)
-
+        x_test_in_revin_space_arr = x_test_in_revin_space_arr[..., :self.args.data_channels, :]
+        x_test_original_arr = x_test_original_arr[..., :self.args.data_channels, :]
         print('Flattening Sensors Out')
         if self.args.seq_len != 96 and self.args.pred_len != 0 :
             pdb.set_trace()

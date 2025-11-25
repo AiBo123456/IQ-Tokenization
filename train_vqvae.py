@@ -39,9 +39,10 @@ def main(device, config, save_dir, logger, data_init_loc, args):
     else:
         os.makedirs(os.path.join(save_dir, 'configs'))
 
+    config_dict = OmegaConf.to_container(config, resolve=True)
     # Save the json copy
     with open(os.path.join(save_dir, 'configs', 'config_file.json'), 'w+') as f:
-        json.dump(config, f, indent=4)
+        json.dump(config_dict, f, indent=4)
 
     # Save the Master File
     summary['log_path'] = os.path.join(save_dir)
@@ -98,7 +99,7 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
     start_time = time.time()
 
     print('BATCHSIZE:', args.batchsize)
-    train_loader, vali_loader, test_loader = create_datloaders(batchsize=args.batchsize, base_path=args.base_path, revined_data=args.revined_data)
+    train_loader, vali_loader, test_loader = create_datloaders(batchsize=args.batchsize, base_path=args.base_path, val_base_path=args.val_path, revined_data=args.revined_data)
 
     # do + 0.5 to ciel it
     for epoch in tqdm(range(int((vqvae_config['num_training_updates']/len(train_loader)) + 0.5))):
@@ -156,10 +157,10 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
                     val_vq_losses.append(val_vq_loss.item())
                     val_recon_errors.append(val_recon_error.item())
                     val_perplexities.append(val_perplexity.item())
-                comet_logger.log_metric('val_vqvae_loss_each_batch', sum(val_losses)/len(val_losses))
-                comet_logger.log_metric('val_vqvae_vq_loss_each_batch', sum(val_vq_losses)/len(val_vq_losses))
-                comet_logger.log_metric('val_vqvae_recon_loss_each_batch', sum(val_recon_errors)/len(val_recon_errors))
-                comet_logger.log_metric('val_vqvae_perplexity_each_batch', sum(val_perplexities)/len(val_perplexities))
+            comet_logger.log_metric('val_vqvae_loss_each_batch', sum(val_losses)/len(val_losses))
+            comet_logger.log_metric('val_vqvae_vq_loss_each_batch', sum(val_vq_losses)/len(val_vq_losses))
+            comet_logger.log_metric('val_vqvae_recon_loss_each_batch', sum(val_recon_errors)/len(val_recon_errors))
+            comet_logger.log_metric('val_vqvae_perplexity_each_batch', sum(val_perplexities)/len(val_perplexities))
                 
     if config.save_model:
         # save the model checkpoints locally and to comet
@@ -170,39 +171,40 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
     return model
 
 
-def create_datloaders(batchsize=100, base_path='dummy', revined_data=False):
+def create_datloaders(batchsize=100, base_path='dummy', val_base_path='dummy', revined_data=False):
 
     full_path = base_path
+    val_full_path = val_base_path
 
     if not revined_data:
         train_data = np.load(os.path.join(full_path, "train_notrevin_x.npy"), allow_pickle=True)
-        val_data = np.load(os.path.join(full_path, "val_notrevin_x.npy"), allow_pickle=True)
-        test_data = np.load(os.path.join(full_path, "test_notrevin_x.npy"), allow_pickle=True)
+        val_data = np.load(os.path.join(val_full_path, "val_notrevin_x.npy"), allow_pickle=True)
+        # test_data = np.load(os.path.join(full_path, "test_notrevin_x.npy"), allow_pickle=True)
 
     elif revined_data:
         train_data = np.load(os.path.join(full_path, "train_revin_x.npy"), allow_pickle=True)
-        val_data = np.load(os.path.join(full_path, "val_revin_x.npy"), allow_pickle=True)
-        test_data = np.load(os.path.join(full_path, "test_revin_x.npy"), allow_pickle=True)
+        val_data = np.load(os.path.join(val_full_path, "val_revin_x.npy"), allow_pickle=True)
+        # test_data = np.load(os.path.join(full_path, "test_revin_x.npy"), allow_pickle=True)
 
     train_dataloader = torch.utils.data.DataLoader(train_data,
                                                    batch_size=batchsize,
                                                    shuffle=True,
-                                                   num_workers=2,
+                                                   num_workers=1,
                                                    drop_last=False)
 
     val_dataloader = torch.utils.data.DataLoader(val_data,
                                                 batch_size=batchsize,
                                                 shuffle=False,
-                                                num_workers=2,
+                                                num_workers=1,
                                                 drop_last=False)
 
-    test_dataloader = torch.utils.data.DataLoader(test_data,
-                                                batch_size=batchsize,
-                                                shuffle=False,
-                                                num_workers=2,
-                                                drop_last=False)
+    # test_dataloader = torch.utils.data.DataLoader(test_data,
+    #                                             batch_size=batchsize,
+    #                                             shuffle=False,
+    #                                             num_workers=1,
+    #                                             drop_last=False)
 
-    return train_dataloader, val_dataloader, test_dataloader
+    return train_dataloader, val_dataloader, None
 
 
 if __name__ == '__main__':
