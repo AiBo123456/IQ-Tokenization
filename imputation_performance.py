@@ -1,8 +1,10 @@
 import argparse
+import json
 import numpy as np
 import os
 import pdb
 from omegaconf import OmegaConf
+from matplotlib import pyplot as plt
 import torch
 import torch.nn as nn
 
@@ -11,6 +13,8 @@ def one_loop(loader, vqvae_model, device, args):
     mse = []
     mae = []
     acc = []
+    cosd_mse = []
+    code_acc = []
 
     for i, batch_x in enumerate(loader):
         batch_x = batch_x.float().to(device)
@@ -24,6 +28,7 @@ def one_loop(loader, vqvae_model, device, args):
         inp = batch_x.masked_fill(mask == 0, 0)
 
         x_codes, x_code_ids, codebook = revintime2codes(inp, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)
+        x_code_gd, x_code_ids_gd, _ = revintime2codes(batch_x, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)    
         # expects code to be dim [bs x nvars x compressed_time]
         x_predictions_revin_space = codes2timerevin(x_code_ids, codebook, args.compression_factor, args.data_channels, vqvae_model.decoder)
 
@@ -32,11 +37,37 @@ def one_loop(loader, vqvae_model, device, args):
 
         mse.append(nn.functional.mse_loss(batch_x_masky, pred_x_masky).item())
         mae.append(nn.functional.l1_loss(batch_x_masky, pred_x_masky).item())
-        acc.append(torch.mean((torch.abs(batch_x_masky - pred_x_masky) < args.acc_threshold).float()).item())
 
+        cosd_mse.append(nn.functional.mse_loss(x_codes, x_code_gd).item())
+        code_acc.append(torch.mean((x_code_ids == x_code_ids_gd).float()).item())
+
+        # plt.plot(batch_x[0, 0, :].detach().cpu().numpy(), label='original')
+        plt.plot(inp[0, 0, :].detach().cpu().numpy(), label='masked')
+        plt.plot(x_predictions_revin_space[0, :, 0].detach().cpu().numpy(), label='imputed')
+        # print(batch_x[0, 0, :].detach().cpu().numpy())
+
+        plt.legend()
+        plt.title('Imputation signal comparison')
+        plt.show()
+
+        # save file
+        # pred_list = x_predictions_revin_space.detach().cpu().tolist()
+        # batch_list = batch_x.detach().cpu().tolist()
+
+        # data_to_save = {
+        #     "x_predictions": pred_list,
+        #     "batch_x": batch_list
+        # }
+
+        # # Save JSON
+        # with open(f"saved_imputation_results_mask_ratio_{args.mask_ratio}.json", "w") as f:
+        #     json.dump(data_to_save, f)
+            
+        # print(f"Saved to saved_imputation_results_mask_ratio_{args.mask_ratio}.json")
     print('MSE:', np.mean(mse))
     print('MAE:', np.mean(mae))
-    print('Accuracy:', np.mean(acc))
+    print('Code MSE:', np.mean(cosd_mse))
+    print('Code Accuracy:', np.mean(code_acc))
 
 def revintime2codes(revin_data, compression_factor, vqvae_encoder, vqvae_quantizer):
     '''
@@ -110,9 +141,12 @@ def codes2timerevin(code_ids, codebook, compression_factor, data_channels, vqvae
     return predictions_revin_space
 
 
-def create_NONrevin_dataloaders(batchsize=100, dataset="dummy", base_path='dummy'):
+def create_dataloaders(batchsize=100, dataset="dummy", base_path='dummy', revin=True):
 
-    test_data = np.load(os.path.join(base_path, "test_notrevin_x.npy"), allow_pickle=True)
+    if revin:
+        test_data = np.load(os.path.join(base_path, "test_revin_x.npy"), allow_pickle=True)
+    else:
+        test_data = np.load(os.path.join(base_path, "test_not_revin_x.npy"), allow_pickle=True)
 
     test_dataloader = torch.utils.data.DataLoader(test_data,
                                                 batch_size=batchsize,
@@ -129,7 +163,7 @@ def main(args):
     vqvae_model.to(device)
     vqvae_model.eval()
 
-    test_loader = create_NONrevin_dataloaders(batchsize=8192, dataset='IQ_data', base_path=args.base_path)
+    test_loader = create_dataloaders(batchsize=8192, dataset='IQ_data', base_path=args.base_path, revin=args.revin)
 
     print('TEST')
     one_loop(test_loader, vqvae_model, device, args)

@@ -385,7 +385,7 @@ class Dataset_Pred(Dataset):
 class Dataset_IQ(Dataset):
     def __init__(self, root_path, flag='train', size=None,
                  features='S', data_path='ETTh1.csv',
-                 target='OT', scale=True, timeenc=0, freq='h', input_len=100, sampling_freq=100, train_rate=0.7, test_rate=0.2):
+                 target='OT', scale=True, timeenc=0, freq='h', input_len=100, sampling_freq=100, train_rate=0.7, test_rate=0.2, downsampling_factor=1, data_channels=2):
 
         assert size is not None, "IQ dataset requires size argument"
 
@@ -407,6 +407,8 @@ class Dataset_IQ(Dataset):
         self.sampling_freq = sampling_freq
         self.train_rate = train_rate
         self.test_rate = test_rate
+        self.downsampling_factor = downsampling_factor
+        self.ch = data_channels
 
         self.root_path = root_path
         self.data_path = data_path
@@ -420,13 +422,14 @@ class Dataset_IQ(Dataset):
         raw_data = []
         for mat_file in mat_files:
             with h5py.File(os.path.join(data_folder, mat_file), 'r') as h:
-                raw_data.append(h['write_iq'][:,:self.input_len])
+                raw_data.append(h['write_iq'][:self.ch,:self.input_len:self.downsampling_factor])
         
         # change the order of channels and time
         raw_data = np.concatenate(raw_data, axis=1).T
         # split real and imag parts into separate channels
         raw_data = np.stack((raw_data['real'], raw_data['imag']), axis=-1)
-        times_len, channels_num, _ = raw_data.shape
+        raw_data = raw_data.reshape(raw_data.shape[0], -1)
+        times_len, channels_num = raw_data.shape
 
         num_train = int(times_len * self.train_rate)
         num_test = int(times_len * self.test_rate)
@@ -438,8 +441,8 @@ class Dataset_IQ(Dataset):
 
         if self.scale:
             train_data = raw_data[border1s[0]:border2s[0]]
-            self.scaler.fit(train_data.reshape(-1, 2))
-            data = self.scaler.transform(raw_data.reshape(-1, 2)).reshape(times_len, channels_num, 2)
+            self.scaler.fit(train_data)
+            data = self.scaler.transform(raw_data)
         else:
             data = raw_data
 
@@ -451,8 +454,10 @@ class Dataset_IQ(Dataset):
         self.data_stamp = np.array(data_stamp)
 
     def __getitem__(self, index):
-        s_begin = index
-        s_end = s_begin + self.seq_len
+        s_begin = index*self.seq_len
+        s_end = (index+1) * self.seq_len
+        # s_begin = index
+        # s_end = index + self.seq_len
         r_begin = s_end - self.label_len
         r_end = r_begin + self.label_len + self.pred_len
 
@@ -464,7 +469,8 @@ class Dataset_IQ(Dataset):
         return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
-        return len(self.data_x) - self.seq_len - self.pred_len + 1
+        return len(self.data_x) // self.seq_len
+        # return len(self.data_x) - self.seq_len - self.pred_len + 1
 
     def inverse_transform(self, data):
         return self.scaler.inverse_transform(data)

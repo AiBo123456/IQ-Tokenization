@@ -1,13 +1,13 @@
-trained_vqvae_model_path: saved_models/model_11_25/checkpoints/final_model.pth
-base_path: IQ_normalized_data/June/
+trained_vqvae_model_path: saved_models/model_down_triplet_12_4/checkpoints/final_model.pth
+base_path: IQ_normalized_data/June_downsampling/
 mask_ratio: 0.5
 compression_factor: 4
 use_gpu: true
 gpu: 0
 use_multi_gpu: false
 data_channels: 2
-acc_threshold: 0.3
-
+# acc_threshold: 0.3
+revin: true
 
 
 

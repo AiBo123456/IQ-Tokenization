@@ -22,7 +22,6 @@ class ExtractData:
     def one_loop(self, loader):
         x_original = []
         x_in_revin_space = []
-
         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(loader):
             x_original.append(np.array(batch_x))
             batch_x = batch_x.float().to(self.device)
@@ -33,6 +32,10 @@ class ExtractData:
         x_original_arr = np.concatenate(x_original, axis=0)
         x_in_revin_space_arr = np.concatenate(x_in_revin_space, axis=0)
 
+        # indices = np.random.choice(x_original_arr.shape[0], size=int(x_original_arr.shape[0]*0.1), replace=True)
+        # x_in_revin_space_arr = x_in_revin_space_arr[indices]
+        # x_original_arr = x_original_arr[indices]
+
         print(x_in_revin_space_arr.shape, x_original_arr.shape)
         return x_in_revin_space_arr, x_original_arr
 
@@ -42,19 +45,21 @@ class ExtractData:
         test_data, test_loader = self._get_data(flag='test')
 
         print('got loaders starting revin')
+        s_len = self.args.seq_len
+        ch = self.args.data_channels
 
         # These have dimension [bs, ntime, nvars]
         x_train_in_revin_space_arr, x_train_original_arr = self.one_loop(train_loader)
-        x_train_in_revin_space_arr = x_train_in_revin_space_arr[..., :self.args.data_channels, :]
-        x_train_original_arr = x_train_original_arr[..., :self.args.data_channels, :]
+        x_train_in_revin_space_arr = x_train_in_revin_space_arr.reshape(-1, s_len, ch, 2)
+        x_train_original_arr = x_train_original_arr.reshape(-1, s_len, ch, 2)
         print('starting val')
         x_val_in_revin_space_arr, x_val_original_arr = self.one_loop(vali_loader)
-        x_val_in_revin_space_arr = x_val_in_revin_space_arr[..., :self.args.data_channels, :]
-        x_val_original_arr = x_val_original_arr[..., :self.args.data_channels, :]
+        x_val_in_revin_space_arr = x_val_in_revin_space_arr.reshape(-1, s_len, ch, 2)
+        x_val_original_arr = x_val_original_arr.reshape(-1, s_len, ch, 2)
         print('starting test')
         x_test_in_revin_space_arr, x_test_original_arr = self.one_loop(test_loader)
-        x_test_in_revin_space_arr = x_test_in_revin_space_arr[..., :self.args.data_channels, :]
-        x_test_original_arr = x_test_original_arr[..., :self.args.data_channels, :]
+        x_test_in_revin_space_arr = x_test_in_revin_space_arr.reshape(-1, s_len, ch, 2)
+        x_test_original_arr = x_test_original_arr.reshape(-1, s_len, ch, 2)
         print('Flattening Sensors Out')
         if self.args.seq_len != 96 and self.args.pred_len != 0 :
             pdb.set_trace()
@@ -79,7 +84,6 @@ class ExtractData:
             orig_x_test_arr = x_test_original_arr.reshape((x_test_original_arr.shape[0],
                                                            x_test_original_arr.shape[1],
                                                            -1))
-            
             x_train_arr = np.swapaxes(x_train_arr, 1, 2)
             x_val_arr = np.swapaxes(x_val_arr, 1, 2)
             x_test_arr = np.swapaxes(x_test_arr, 1, 2)  
