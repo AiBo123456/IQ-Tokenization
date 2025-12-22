@@ -10,11 +10,16 @@ import torch.nn as nn
 
 
 def one_loop(loader, vqvae_model, device, args):
+    torch.manual_seed(args.general_seed)
+    np.random.seed(args.general_seed)
     mse = []
     mae = []
+    full_mse = []
+    full_mae = []
     acc = []
     cosd_mse = []
     code_acc = []
+    encoder_mse = []
 
     for i, batch_x in enumerate(loader):
         batch_x = batch_x.float().to(device)
@@ -22,33 +27,42 @@ def one_loop(loader, vqvae_model, device, args):
 
         # random mask
         B, N, T = batch_x.shape
-        mask = torch.rand((B, N, T)).to(device)
+        batch_rep = batch_x.repeat(2, 1, 1)
+        batch_x_noise = batch_rep + torch.randn_like(batch_rep).to(device) * args.noise_level
+        mask = torch.rand((2*B, N, T)).to(device)
         mask[mask <= args.mask_ratio] = 0  # masked
         mask[mask > args.mask_ratio] = 1  # remained
-        inp = batch_x.masked_fill(mask == 0, 0)
+        inp = batch_x_noise.masked_fill(mask == 0, 0)
 
-        x_codes, x_code_ids, codebook = revintime2codes(inp, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)
-        x_code_gd, x_code_ids_gd, _ = revintime2codes(batch_x, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)    
+        x_codes, x_latent, x_code_ids, codebook = revintime2codes(inp, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)
+        # x_code_gd, x_latent_gd, x_code_ids_gd, _ = revintime2codes(batch_rep, args.compression_factor, vqvae_model.encoder, vqvae_model.vq)    
         # expects code to be dim [bs x nvars x compressed_time]
         x_predictions_revin_space = codes2timerevin(x_code_ids, codebook, args.compression_factor, args.data_channels, vqvae_model.decoder)
 
-        batch_x_masky = batch_x[mask == 0]
-        pred_x_masky = np.swapaxes(x_predictions_revin_space, 1, 2)[mask == 0]
+        x_codes = x_codes.reshape(2, B, -1)
+        x_latent = x_latent.reshape(2, B, -1)
+        x_code_ids = x_code_ids.reshape(2, B, -1)
+
+        batch_x_masky = batch_rep[mask == 0]
+        pred_x_masky = x_predictions_revin_space[mask == 0]
 
         mse.append(nn.functional.mse_loss(batch_x_masky, pred_x_masky).item())
         mae.append(nn.functional.l1_loss(batch_x_masky, pred_x_masky).item())
+        full_mse.append(nn.functional.mse_loss(batch_rep, x_predictions_revin_space).item())
+        full_mae.append(nn.functional.l1_loss(batch_rep, x_predictions_revin_space).item())
+        encoder_mse.append(nn.functional.mse_loss(x_latent[0], x_latent[1]).item())
 
-        cosd_mse.append(nn.functional.mse_loss(x_codes, x_code_gd).item())
-        code_acc.append(torch.mean((x_code_ids == x_code_ids_gd).float()).item())
+        cosd_mse.append(nn.functional.mse_loss(x_codes[0], x_codes[1]).item())
+        code_acc.append(torch.mean((x_code_ids[0] == x_code_ids[1]).float()).item())
 
         # plt.plot(batch_x[0, 0, :].detach().cpu().numpy(), label='original')
         plt.plot(inp[0, 0, :].detach().cpu().numpy(), label='masked')
-        plt.plot(x_predictions_revin_space[0, :, 0].detach().cpu().numpy(), label='imputed')
+        plt.plot(x_predictions_revin_space[0, 0, :].detach().cpu().numpy(), label='imputed')
         # print(batch_x[0, 0, :].detach().cpu().numpy())
 
         plt.legend()
         plt.title('Imputation signal comparison')
-        plt.show()
+        # plt.show()
 
         # save file
         # pred_list = x_predictions_revin_space.detach().cpu().tolist()
@@ -64,10 +78,13 @@ def one_loop(loader, vqvae_model, device, args):
         #     json.dump(data_to_save, f)
             
         # print(f"Saved to saved_imputation_results_mask_ratio_{args.mask_ratio}.json")
-    print('MSE:', np.mean(mse))
-    print('MAE:', np.mean(mae))
+    print('Masked MSE:', np.mean(mse))
+    print('Masked MAE:', np.mean(mae))
+    print('Full MSE:', np.mean(full_mse))
+    print('Full MAE:', np.mean(full_mae))
     print('Code MSE:', np.mean(cosd_mse))
     print('Code Accuracy:', np.mean(code_acc))
+    print('Encoder MSE:', np.mean(encoder_mse))
 
 def revintime2codes(revin_data, compression_factor, vqvae_encoder, vqvae_quantizer):
     '''
@@ -104,7 +121,7 @@ def revintime2codes(revin_data, compression_factor, vqvae_encoder, vqvae_quantiz
                                   compressed_time)  # codes: [bs, nvars, code_dim, compressed_time]
         code_ids = encoding_indices.view(bs, 1, compressed_time)  # code_ids: [bs, nvars, compressed_time]
 
-    return codes, code_ids, embedding_weight
+    return codes, latent, code_ids, embedding_weight
 
 
 def codes2timerevin(code_ids, codebook, compression_factor, data_channels, vqvae_decoder):
@@ -136,9 +153,9 @@ def codes2timerevin(code_ids, codebook, compression_factor, data_channels, vqvae
         quantized_swaped = torch.swapaxes(quantized, 1,2)  # quantized_swaped: [bs * nvars, code_dim, compressed_pred_len]
         prediction_recon = vqvae_decoder(quantized_swaped.to(device), compression_factor)  # prediction_recon: [bs * nvars, pred_len]
         prediction_recon_reshaped = prediction_recon.reshape(bs, data_channels, prediction_recon.shape[-1])  # prediction_recon_reshaped: [bs x nvars x pred_len]
-        predictions_revin_space = torch.swapaxes(prediction_recon_reshaped, 1,2)  # prediction_recon_nvars_last: [bs x pred_len x nvars]
+        # predictions_revin_space = torch.swapaxes(prediction_recon_reshaped, 1,2)  # prediction_recon_nvars_last: [bs x pred_len x nvars]
 
-    return predictions_revin_space
+    return prediction_recon_reshaped
 
 
 def create_dataloaders(batchsize=100, dataset="dummy", base_path='dummy', revin=True):
@@ -163,7 +180,7 @@ def main(args):
     vqvae_model.to(device)
     vqvae_model.eval()
 
-    test_loader = create_dataloaders(batchsize=8192, dataset='IQ_data', base_path=args.base_path, revin=args.revin)
+    test_loader = create_dataloaders(batchsize=1024, dataset='IQ_data', base_path=args.base_path, revin=args.revin)
 
     print('TEST')
     one_loop(test_loader, vqvae_model, device, args)
