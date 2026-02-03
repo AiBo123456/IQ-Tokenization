@@ -6,8 +6,8 @@ model_init_num_gpus: 0
 data_init_cpu_or_gpu: cpu
 
 # data loader
-base_path: IQ_normalized_data/July_downsampling/ # IQ_normalized_data/July_downsampling/, data/electricity_downsamp
-val_path:  IQ_normalized_data/June_downsampling/ # IQ_normalized_data/June_downsampling/, data/electricity_downsamp
+base_path: IQ_labeled_data/July_downsampling/ # IQ_normalized_data/July_downsampling/, data/electricity_downsamp
+val_path:  IQ_labeled_data/June_downsampling/ # IQ_normalized_data/June_downsampling/, data/electricity_downsamp
 mask_ratio: 0.0
 revined_data: true
 
@@ -29,7 +29,7 @@ vqvae_config:
   infoNCE_factor: 0.1
 save_path: saved_models/
 save_interval: 500
-batchsize: 1024 # 8192
+batchsize: 512 # 8192
 noise_level: 0.1
 
 

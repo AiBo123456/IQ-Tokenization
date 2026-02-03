@@ -2,7 +2,7 @@
 seed: 13
 
 # Save Location
-save_path: IQ_normalized_data/June_downsampling/
+save_path: IQ_labeled_data/June_downsampling/
 
 # data loader
 data: IQ
@@ -11,19 +11,20 @@ data_path: IQ_data/June/
 features: M # forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate
 target: OT # target feature in S or MS task
 freq: s # freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h
-input_len: 20000000
+input_len: 16384000
 sampling_freq: 163840000
-downsampling_factor: 20
-train_rate: 0.1
-test_rate: 0.8
+downsampling_factor: 160
+train_rate: 0.3
+test_rate: 0.6
+low_pass_filter: True
 
 
 # forecasting task
 pred_len: 0
 label_len: 50
-seq_len: 1000
+seq_len: 1024
 data_channels: 1
-compression_factor: 20
+# compression_factor: 20
 
 # Formers
 enc_in: 2
@@ -31,8 +32,8 @@ embed: timeF # time features encoding, options:[timeF, fixed, learned]
 
 
 # optimization
-num_workers: 4
-batch_size: 8192
+num_workers: 0
+batch_size: 2048
 
 # GPU
 use_gpu: true

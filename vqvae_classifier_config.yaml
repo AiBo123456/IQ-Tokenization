@@ -1,0 +1,36 @@
+seed: 13
+model_init_num_gpus: 0
+data_init_cpu_or_gpu: cpu
+
+base_path: IQ_labeled_data/June_downsampling/
+val_path:  IQ_labeled_data/June_downsampling/
+revined_data: true
+label_key: stats
+batchsize: 512
+num_workers: 1
+
+reinit_model_params: false
+
+save_path: saved_models/vqvae_classifier/
+
+classifier:
+  pretrained_vqvae_path: saved_models/model_down_160_low_pass/checkpoints/final_model.pth
+  num_classes: null
+  mlp_hidden: 128
+  dropout: 0.1
+  arch: transformer
+  d_model: 128
+  nhead: 4
+  num_layers: 2
+  dim_feedforward: 256
+  learning_rate: 1e-3
+  num_epochs: 100
+  pooling: mean
+
+comet_config:
+  api_key: "932CSCW8zABGsPmidoLtvfLW5"
+  project_name: totem
+  workspace: ai-bo
+comet_log: true
+comet_tag: pipline
+comet_name: vqvae_iq_classification_exp # vqvae_iq_experiment, vqvae_electricity_infonce
