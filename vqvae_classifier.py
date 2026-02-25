@@ -22,7 +22,7 @@ class VQVAEClassifier(nn.Module):
         mlp_hidden=128,
         dropout=0.1,
         pooling="mean",
-        arch="transformer",
+        arch="mlp_flat",
         d_model=128,
         nhead=4,
         num_layers=2,
@@ -42,10 +42,26 @@ class VQVAEClassifier(nn.Module):
                 p.requires_grad = False
 
         feat_dim = self.vqvae.vq._embedding_dim
+        self.flatten_codes = False
 
         if self.arch == "mlp":
             self.classifier = nn.Sequential(
                 nn.Linear(feat_dim, mlp_hidden),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(mlp_hidden, num_classes),
+            )
+            self.input_proj = None
+            self.transformer = None
+            self.cls_token = None
+            self.out_proj = None
+        elif self.arch == "mlp_flat":
+            self.flatten_codes = True
+            self.classifier = nn.Sequential(
+                nn.LazyLinear(mlp_hidden),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(mlp_hidden, mlp_hidden),
                 nn.ReLU(),
                 nn.Dropout(dropout),
                 nn.Linear(mlp_hidden, num_classes),
@@ -121,9 +137,16 @@ class VQVAEClassifier(nn.Module):
 
         return self.out_proj(pooled)
 
+    def _mlp_flat_logits(self, x):
+        quantized = self._extract_quantized(x)
+        flat = quantized.flatten(1)
+        return self.classifier(flat)
+
     def forward(self, x):
         if self.arch == "mlp":
             feats = self.extract_features(x)
             logits = self.classifier(feats)
             return logits
+        if self.arch == "mlp_flat":
+            return self._mlp_flat_logits(x)
         return self._transformer_logits(x)

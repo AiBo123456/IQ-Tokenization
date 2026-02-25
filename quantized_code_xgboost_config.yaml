@@ -1,0 +1,52 @@
+﻿seed: 13
+
+code_xgboost:
+  base_path: IQ_labeled_data/June_downsampling_10ms
+  code_suffix: revin_x.npy # revin_x_quantized_codes.npz (quantized) or revin_x.npy (raw)
+  label_suffix: notrevin_x_binary_labels.npz 
+  code_key: codes # auto-resolved by suffix: .npy -> codes, .npz -> code_ids
+  label_key: binary_classes
+
+  # 1-based PRN index (e.g. 9 means labels[:, 8])
+  target_prn: 19
+
+  # fixed or stratified_resplit
+  split_mode: stratified_resplit
+  train_ratio: 0.3
+  val_ratio: 0.7
+
+  # flat, pooled, pooled_stats, pooled_rich, or auto
+  feature_mode: auto
+  # feature_modes: [pooled_rich, pooled_stats]
+
+  n_estimators: 800
+  num_trials: 24
+  max_search_seconds: 180
+  use_scale_pos_weight: true
+  tree_method: hist
+  n_jobs: -1
+
+  search_max_depths: [2, 3, 4]
+  search_min_child_weights: [1, 2, 4, 6]
+  search_subsamples: [0.5, 0.7, 0.9]
+  search_colsample_bytree: [0.5, 0.7, 0.9]
+  search_reg_alphas: [0.0, 0.5, 1.0, 2.0]
+  search_reg_lambdas: [1.0, 2.0, 5.0, 10.0]
+  search_learning_rates: [0.01, 0.03, 0.05, 0.08]
+  search_gammas: [0.0, 0.1, 0.3]
+  search_max_delta_steps: [0.0, 1.0, 2.0]
+  search_boosters: [gbtree]
+  code_vocab_size: 384
+  code_bigram_bins: 32
+
+  # Val-first selection:
+  # 1) keep top val_prefilter_ratio (or val_prefilter_k if set) by validation (AUC+ACC)
+  # 2) use train metrics as secondary tie-break / quality gate
+  val_prefilter_ratio: 0.4
+  # val_prefilter_k: 16
+  # Optional strict gates (disabled when null/commented):
+  # min_train_auc: 0.85
+  # min_train_acc: 0.80
+
+  ensemble_top_k: 12
+  save_path: saved_models/code_classifier_xgboost

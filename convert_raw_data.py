@@ -22,8 +22,10 @@ class ExtractData:
     def one_loop(self, loader):
         x_original = []
         x_in_revin_space = []
-        for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(loader):
+        seq_labels = []
+        for i, (batch_x, batch_y, batch_x_mark, batch_y_mark, seq_label) in enumerate(loader):
             x_original.append(np.array(batch_x))
+            seq_labels.append(seq_label)
             batch_x = batch_x.float().to(self.device)
 
             # data going into revin should have dim:[bs x seq_len x nvars]
@@ -31,13 +33,14 @@ class ExtractData:
 
         x_original_arr = np.concatenate(x_original, axis=0)
         x_in_revin_space_arr = np.concatenate(x_in_revin_space, axis=0)
+        seq_labels_arr = np.concatenate(seq_labels, axis=0)
 
         # indices = np.random.choice(x_original_arr.shape[0], size=int(x_original_arr.shape[0]*0.1), replace=True)
         # x_in_revin_space_arr = x_in_revin_space_arr[indices]
         # x_original_arr = x_original_arr[indices]
 
-        print(x_in_revin_space_arr.shape, x_original_arr.shape)
-        return x_in_revin_space_arr, x_original_arr
+        print(x_in_revin_space_arr.shape, x_original_arr.shape, seq_labels_arr.shape)
+        return x_in_revin_space_arr, x_original_arr, seq_labels_arr
 
     def extract_data(self):
         train_data, train_loader = self._get_data(flag='train')
@@ -49,15 +52,15 @@ class ExtractData:
         ch = self.args.data_channels
 
         # These have dimension [bs, ntime, nvars]
-        x_train_in_revin_space_arr, x_train_original_arr = self.one_loop(train_loader)
+        x_train_in_revin_space_arr, x_train_original_arr, x_train_seq_label_arr = self.one_loop(train_loader)
         x_train_in_revin_space_arr = x_train_in_revin_space_arr.reshape(-1, s_len, ch, 2)
         x_train_original_arr = x_train_original_arr.reshape(-1, s_len, ch, 2)
         print('starting val')
-        x_val_in_revin_space_arr, x_val_original_arr = self.one_loop(vali_loader)
+        x_val_in_revin_space_arr, x_val_original_arr, x_val_seq_label_arr = self.one_loop(vali_loader)
         x_val_in_revin_space_arr = x_val_in_revin_space_arr.reshape(-1, s_len, ch, 2)
         x_val_original_arr = x_val_original_arr.reshape(-1, s_len, ch, 2)
         print('starting test')
-        x_test_in_revin_space_arr, x_test_original_arr = self.one_loop(test_loader)
+        x_test_in_revin_space_arr, x_test_original_arr, x_test_seq_label_arr = self.one_loop(test_loader)
         x_test_in_revin_space_arr = x_test_in_revin_space_arr.reshape(-1, s_len, ch, 2)
         x_test_original_arr = x_test_original_arr.reshape(-1, s_len, ch, 2)
         print('Flattening Sensors Out')
@@ -93,6 +96,7 @@ class ExtractData:
 
             print(x_train_arr.shape, x_val_arr.shape, x_test_arr.shape)
             print(orig_x_train_arr.shape, orig_x_val_arr.shape, orig_x_test_arr.shape)
+            print(x_train_seq_label_arr.shape, x_val_seq_label_arr.shape, x_test_seq_label_arr.shape)
 
         if not os.path.exists(self.args.save_path):
             os.makedirs(self.args.save_path)
@@ -104,6 +108,10 @@ class ExtractData:
         np.save(self.args.save_path + '/train_notrevin_x.npy', orig_x_train_arr)
         np.save(self.args.save_path + '/val_notrevin_x.npy', orig_x_val_arr)
         np.save(self.args.save_path + '/test_notrevin_x.npy', orig_x_test_arr)
+
+        np.save(self.args.save_path + '/train_x_labels.npy', x_train_seq_label_arr)
+        np.save(self.args.save_path + '/val_x_labels.npy', x_val_seq_label_arr)
+        np.save(self.args.save_path + '/test_x_labels.npy', x_test_seq_label_arr)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@
 seed: 13
 
 # Save Location
-save_path: IQ_labeled_data/June_downsampling/
+save_path: IQ_labeled_data/June_downsampling_10ms/
 
 # data loader
 data: IQ
@@ -14,15 +14,15 @@ freq: s # freq for time features encoding, options:[s:secondly, t:minutely, h:ho
 input_len: 16384000
 sampling_freq: 163840000
 downsampling_factor: 160
-train_rate: 0.3
-test_rate: 0.6
+train_rate: 0.4
+test_rate: 0.5
 low_pass_filter: True
 
 
 # forecasting task
 pred_len: 0
 label_len: 50
-seq_len: 1024
+seq_len: 10240
 data_channels: 1
 # compression_factor: 20
 

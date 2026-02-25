@@ -41,7 +41,8 @@ def data_provider(args, flag):
         train_rate=args.train_rate,
         test_rate=args.test_rate,
         downsampling_factor=args.downsampling_factor,
-        data_channels=args.data_channels
+        data_channels=args.data_channels,
+        low_pass_filter=args.low_pass_filter
     )
     print(flag, len(data_set))
     data_loader = DataLoader(

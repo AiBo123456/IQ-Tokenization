@@ -1,31 +1,47 @@
-seed: 13
+﻿seed: 13
 model_init_num_gpus: 0
 data_init_cpu_or_gpu: cpu
 
 base_path: IQ_labeled_data/June_downsampling/
 val_path:  IQ_labeled_data/June_downsampling/
 revined_data: true
-label_key: stats
+prn_id: 4
+label_key: binary_classes
 batchsize: 512
 num_workers: 1
+train_ratio: 0.6
+val_ratio: 0.4
+test_ratio: 0.0
 
 reinit_model_params: false
 
 save_path: saved_models/vqvae_classifier/
 
 classifier:
-  pretrained_vqvae_path: saved_models/model_down_160_low_pass/checkpoints/final_model.pth
+  pretrained_vqvae_path: saved_models/model_down_160_if_compasation_low_pass/checkpoints/final_model.pth
   num_classes: null
-  mlp_hidden: 128
-  dropout: 0.1
-  arch: transformer
-  d_model: 128
+  mlp_hidden: 64
+  dropout: 0.2
+  arch: mlp
+  d_model: 64
   nhead: 4
   num_layers: 2
-  dim_feedforward: 256
+  dim_feedforward: 64
   learning_rate: 1e-3
-  num_epochs: 100
+  num_epochs: 80
   pooling: mean
+  weight_decay: 1e-3
+  label_smoothing: 0.02
+  class_weighting: false
+  balanced_sampling: false
+  scheduler_patience: 3
+  scheduler_factor: 0.5
+  min_lr: 1e-6
+  early_stop_patience: 15
+  max_grad_norm: 1.0
+  train_noise_std: 0.002
+  train_time_mask_ratio: 0.02
+  train_channel_dropout: 0.02
 
 comet_config:
   api_key: "932CSCW8zABGsPmidoLtvfLW5"
@@ -34,3 +50,41 @@ comet_config:
 comet_log: true
 comet_tag: pipline
 comet_name: vqvae_iq_classification_exp # vqvae_iq_experiment, vqvae_electricity_infonce
+
+code_classifier:
+  base_path: IQ_labeled_data/June_downsampling_10ms
+  code_suffix: revin_x_quantized_codes.npz
+  label_suffix: notrevin_x_binary_labels.npz
+  code_key: codes
+  label_key: binary_classes
+  train_ratio: 0.6
+  val_ratio: 0.4
+  test_ratio: 0.0
+  batch_size: 256
+  num_workers: 1
+  arch: pooled_mlp
+  hidden_dim: 128
+  dropout: 0.25
+  learning_rate: 8e-4
+  num_epochs: 80
+  weight_decay: 1e-3
+  label_smoothing: 0.01
+  class_weighting: false
+  balanced_sampling: true
+  scheduler_patience: 6
+  scheduler_factor: 0.5
+  min_lr: 1e-6
+  early_stop_patience: 12
+  min_epochs: 15
+  max_grad_norm: 1.0
+  train_noise_std: 0.005
+  train_piece_dropout: 0.02
+  train_channel_dropout: 0.02
+  train_time_mask_ratio: 0.04
+  mixup_alpha: 0.15
+  mixup_prob: 0.2
+  split_mode: stratified_resplit
+  monitor_metric: val_auc
+  target_prn: 29
+  save_path: saved_models/code_classifier
+
