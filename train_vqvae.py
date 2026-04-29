@@ -122,7 +122,9 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
             # mask[mask > args.mask_ratio] = 1  # remained
             # inp = tensor_all_data_in_batch.masked_fill(mask == 0, 0)
             tensor_rep = tensor_all_data_in_batch.repeat(2, 1, 1)
-            tensor_rep = tensor_rep + torch.randn_like(tensor_rep) * args.noise_level
+            #==============Here are some bug need to be fixed, adding noise to inputs helps training !!!!!!!!!!!
+            tensor_rep[B:, ...] = tensor_rep[B:, ...] + torch.randn_like(tensor_rep[B:, ...]) * args.noise_level
+            # tensor_rep[1, ...] = tensor_rep[1, ...] + torch.randn_like(tensor_rep[1, ...]) * args.noise_level
             mask = torch.rand((2*B, C, T)).to(device)
             mask[mask <= args.mask_ratio] = 0  # masked
             mask[mask > args.mask_ratio] = 1  # remained
@@ -130,11 +132,11 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
             
 
             # loss, vq_loss, recon_error, x_recon, perplexity, embedding_weight, encoding_indices, encodings, triplet = \
-            #     model.triplet_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger)
+            #     model.triplet_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger, reconstruct_only_first=True)
             loss, vq_loss, recon_error, x_recon, perplexity, embedding_weight, encoding_indices, encodings, infoNCE_loss = \
-                model.contrastive_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger)
+                model.contrastive_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger, reconstruct_only_first=True)
             # loss, vq_loss, recon_error, x_recon, perplexity, embedding_weight, encoding_indices, encodings = \
-            #     model.shared_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger)
+            #     model.shared_eval(tensor_rep, inp_rep, optimizer, 'train', comet_logger=logger, reconstruct_only_first=True)
             
             losses.append(loss.item())
             vq_losses.append(vq_loss.item())
@@ -167,7 +169,9 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
                     # # random mask
                     B, C, T = batch_x.shape
                     tensor_rep = tensor_all_data_in_batch.repeat(2, 1, 1)
-                    tensor_rep = tensor_rep + torch.randn_like(tensor_rep) * args.noise_level
+                    #==============Here are some bug need to be fixed, adding noise to inputs helps training !!!!!!!!!!!
+                    tensor_rep[B:, ...] = tensor_rep[B:, ...] + torch.randn_like(tensor_rep[B:, ...]) * args.noise_level
+                    # tensor_rep[1, ...] = tensor_rep[1, ...] + torch.randn_like(tensor_rep[1, ...]) * args.noise_level
                     mask = torch.rand((2*B, C, T)).to(device)
                     mask[mask <= args.mask_ratio] = 0  # masked
                     mask[mask > args.mask_ratio] = 1  # remained
@@ -182,7 +186,7 @@ def train_model(model, device, vqvae_config, save_dir, logger, args):
 
                     val_loss, val_vq_loss, val_recon_error, val_x_recon, val_perplexity, val_embedding_weight, \
                         val_encoding_indices, val_encodings = \
-                        model.shared_eval(tensor_rep, inp, optimizer, 'val', comet_logger=logger)
+                        model.shared_eval(tensor_rep, inp, optimizer, 'val', comet_logger=logger, reconstruct_only_first=True)
                     val_losses.append(val_loss.item())
                     val_vq_losses.append(val_vq_loss.item())
                     val_recon_errors.append(val_recon_error.item())

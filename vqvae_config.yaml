@@ -8,13 +8,13 @@ data_init_cpu_or_gpu: cpu
 # data loader
 base_path: IQ_labeled_data/July_downsampling/ # IQ_normalized_data/July_downsampling/, data/electricity_downsamp
 val_path:  IQ_labeled_data/June_downsampling/ # IQ_normalized_data/June_downsampling/, data/electricity_downsamp
-mask_ratio: 0.0
+mask_ratio: 0.2
 revined_data: true
 
 # vqvae model config
 vqvae_config:
-  model_name: vqvae_shuffle_net # vqvae_shuffle_net
-  model_save_name: vqvae_shuffle_net # vqvae_shuffle_net
+  model_name: vqvae_l1_stft_net # vqvae_shuffle_net
+  model_save_name: vqvae_l1_stft_net # vqvae_shuffle_net
   pretrained: false
   learning_rate: 1e-3
   num_training_updates: 20000
@@ -26,7 +26,8 @@ vqvae_config:
   commitment_cost: 0.25
   compression_factor: 4
   data_channels: 2 # 2
-  infoNCE_factor: 0.1
+  infoNCE_factor: 0.0
+  stft_loss_factor: 0.5
 save_path: saved_models/
 save_interval: 500
 batchsize: 512 # 8192
